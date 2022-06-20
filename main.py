@@ -7,8 +7,9 @@ import functools
 from typing import List
 
 from dstructures import (
-    Family, Budget, Plant
+    Family, Plant
 )
+from constraints import BudgetConstraint
 from utils import cmp_families, cmp_plants
 
 def read_input_excel(file_path: str): 
@@ -94,7 +95,7 @@ def read_input_excel(file_path: str):
         data_fam_importance[data_fam_importance["Family"].isin(set_family)]["Family"]
     ]
 
-    budget = Budget(data_budget.iloc[0, 0])
+    budget = data_budget.iloc[0, 0]
 
     return {
         "family_list": family_list, 
@@ -111,39 +112,8 @@ def main(argc, argv):
     production_df = res["production_df"]
     plants = sorted(res["plant_list"], key=cmp_plants) 
 
-    for family in families:
-        family.calculate_cycles()
-        
-    for plant in plants: 
-        pass
-        print(plant.plant_id)
-
-    total_stock = list(map(
-        lambda family: family.ST,
-        families
-    ))
-    plant_restrictions = list(map(
-        lambda plant: plant.capacity, 
-        plants
-    ))
-    stock_vector = np.array([total_stock]).T
-    plant_vector = np.array([plant_restrictions]).T
-    prod_mat = production_df.to_numpy().T
-    plant_production = prod_mat.dot(stock_vector)
-    total_cost = list(map(
-        lambda family: family.total_cost,
-        families,
-    ))
-    cost = sum(total_cost)
-    total_budget = sum(total_stock)*budget.budget_per_ton
-    print("=== Checking constraints for critical fill rate ===")
-    print("PLANT CAPACITY CONSTRAINTS")
-    print(plant_production)
-    print(plant_vector)
-    print(plant_production < plant_vector)
-    print("BUDGET CONSTRAINT")
-    print(cost, total_budget, cost < total_budget)
-    
+    budget_constraint = BudgetConstraint(families, budget)
+    print(budget_constraint.check_for_cfr())
 
 
 if __name__ == '__main__': 

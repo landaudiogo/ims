@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from scipy.optimize import fsolve
 from statistics import NormalDist
 
+from exc import MissingContext
 
 normdist = NormalDist(mu=0, sigma=1)
 
@@ -34,8 +35,9 @@ class Family:
         self.cfr = int(cfr*100)
         self.ind_cost = ind_cost
         self.revenue = revenue
-        self.fr = int(cfr*100)
+        self.__fr = None
         self.cycles = []
+        self.set_cycles()
 
     @property
     def total_cost(self): 
@@ -48,26 +50,57 @@ class Family:
             self.cycles, 0
         )
 
-    def calculate_cycles(self): 
+    @property
+    def fr(self): 
+        return self.__fr
+
+    @fr.setter
+    def fr(self, value: int): 
+        self.__fr = value
+        print(self.family_id)
+        for i, cycle in enumerate(self.cycles): 
+            print(i)
+            cycle.fr = value
+
+    def set_cycles(self): 
         start_day = 1
         while start_day <= 365: 
-            cycle = Cycle()
+            cycle = Cycle(self.daily_demand, self.daily_sigma, start_day, self.lt)
             self.cycles.append(cycle)
-            cycle.calculate_SC(self.daily_demand, start_day, self.lt)
-            cycle.calculate_sigma(self.daily_sigma, start_day, self.lt)
-            cycle.calculate_BKG(self.fr)
-            cycle.calculate_SS()
-            # print(start_day//(self.lt + self.dp), self.family_id, cycle.SC, cycle.SS)
             start_day += self.lt + self.dp
 
 
 class Cycle: 
 
-    def __init__(self): 
+    def __init__(
+        self,
+        daily_demand, 
+        daily_sigma, 
+        start_day, 
+        lt,
+        fr = None
+    ): 
         self.SC = None
+        self.calculate_SC(daily_demand, start_day, lt)
         self.sigma = None
+        self.calculate_sigma(daily_sigma, start_day, lt)
+        self.__fr = None
         self.BKG = None
         self.SS = None
+        if fr != None: 
+            self.__fr = fr
+            self.calculate_BKG()
+            self.calculate_SS()
+
+    @property
+    def fr(self): 
+        return self.__fr
+
+    @fr.setter
+    def fr(self, value): 
+        self.__fr = value
+        self.calculate_BKG()
+        self.calculate_SS()
 
     def calculate_SC(self, daily_demand, start_day, lt): 
         self.SC = sum(daily_demand[start_day-1: start_day-1+lt])
@@ -78,10 +111,16 @@ class Cycle:
             daily_sigma[start_day-1: start_day-1+lt], 0
         )**(1/2)
 
-    def calculate_BKG(self, fr): 
-        self.BKG = (1 - fr)*(self.SC)
+    def calculate_BKG(self): 
+        if self.__fr == None: 
+            raise MissingContext("Fill Rate has not been defined")
+        self.BKG = (1 - self.__fr)*(self.SC)
 
     def calculate_SS(self): 
+        if self.BKG == None: 
+            raise MissingContext(
+                "Cannot calculate Safety Stock prior to calculating BKG."
+            )
         self.SS = fsolve(
             self.solve_for_ss, 
             0, 
@@ -104,10 +143,3 @@ class Plant:
     ):
         self.plant_id = plant_id
         self.capacity = capacity
-
-
-class Budget: 
-
-
-    def __init__(self, budget_per_ton: float): 
-        self.budget_per_ton = budget_per_ton
