@@ -115,6 +115,7 @@ def main(argc, argv):
         family.calculate_cycles()
         
     for plant in plants: 
+        pass
         print(plant.plant_id)
 
     total_stock = list(map(
@@ -128,8 +129,22 @@ def main(argc, argv):
     stock_vector = np.array([total_stock]).T
     plant_vector = np.array([plant_restrictions]).T
     prod_mat = production_df.to_numpy().T
-    print(prod_mat)
-    print(prod_mat.dot(stock_vector) < plant_vector)
+    plant_production = prod_mat.dot(stock_vector)
+    total_cost = list(map(
+        lambda family: family.total_cost,
+        families,
+    ))
+    cost = sum(total_cost)
+    total_budget = sum(total_stock)*budget.budget_per_ton
+    print("=== Checking constraints for critical fill rate ===")
+    print("PLANT CAPACITY CONSTRAINTS")
+    print(plant_production)
+    print(plant_vector)
+    print(plant_production < plant_vector)
+    print("BUDGET CONSTRAINT")
+    print(cost, total_budget, cost < total_budget)
+    
+
 
 if __name__ == '__main__': 
     main(len(sys.argv), sys.argv)

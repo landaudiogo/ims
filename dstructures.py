@@ -38,6 +38,10 @@ class Family:
         self.cycles = []
 
     @property
+    def total_cost(self): 
+        return self.ST*self.ind_cost
+
+    @property
     def ST(self): 
         return functools.reduce(
             lambda acc, cycle: acc+(cycle.SS + cycle.SC), 
