@@ -113,7 +113,9 @@ def main(argc, argv):
     plants = sorted(res["plant_list"], key=cmp_plants) 
 
     budget_constraint = BudgetConstraint(families, budget)
-    print(budget_constraint.check_for_cfr())
+    for family in families: 
+        family.fr = family.cfr
+    print(budget_constraint.validate_constraint())
 
 
 if __name__ == '__main__': 

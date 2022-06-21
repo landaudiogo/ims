@@ -22,13 +22,8 @@ class BudgetConstraint(Constraint):
         sorted_families: List[Family], 
         budget_per_ton: float,
     ):
-        self.families = [family for family in sorted_families]
+        self.families = sorted_families
         self.budget_per_ton = budget_per_ton
-
-    def check_for_cfr(self): 
-        for family in self.families: 
-            family.fr = family.cfr
-        return self.validate_constraint()
 
     def solve_for_fr(self): 
         pass
