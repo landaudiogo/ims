@@ -19,6 +19,7 @@ class Family:
         daily_demand: List[int],
         daily_sigma: List[int],
         dp: int,
+        tbp: int, 
         lt: int,
         tfr: int,
         cfr: int,
@@ -29,10 +30,11 @@ class Family:
         self.family_id = family_id
         self.daily_demand = daily_demand
         self.daily_sigma = daily_sigma
+        self.tbp = int(tbp)
         self.dp = int(dp)
         self.lt = int(lt)
-        self.tfr = int(tfr*100)
-        self.cfr = int(cfr*100)
+        self.tfr = tfr
+        self.cfr = cfr
         self.ind_cost = ind_cost
         self.revenue = revenue
         self.__fr = None
@@ -55,19 +57,17 @@ class Family:
         return self.__fr
 
     @fr.setter
-    def fr(self, value: int): 
+    def fr(self, value: float): 
         self.__fr = value
-        print(self.family_id)
         for i, cycle in enumerate(self.cycles): 
-            print(i)
-            cycle.fr = value
+            cycle.fr = self.__fr
 
     def set_cycles(self): 
         start_day = 1
         while start_day <= 365: 
             cycle = Cycle(self.daily_demand, self.daily_sigma, start_day, self.lt)
             self.cycles.append(cycle)
-            start_day += self.lt + self.dp
+            start_day += self.lt
 
 
 class Cycle: 
@@ -80,6 +80,8 @@ class Cycle:
         lt,
         fr = None
     ): 
+        self.start_day = start_day
+        self.lt = lt
         self.SC = None
         self.calculate_SC(daily_demand, start_day, lt)
         self.sigma = None
@@ -89,18 +91,16 @@ class Cycle:
         self.SS = None
         if fr != None: 
             self.__fr = fr
-            self.calculate_BKG()
-            self.calculate_SS()
+            self.calculate_SS_and_BKG()
 
     @property
     def fr(self): 
         return self.__fr
 
     @fr.setter
-    def fr(self, value): 
+    def fr(self, value: float): 
         self.__fr = value
-        self.calculate_BKG()
-        self.calculate_SS()
+        self.calculate_SS_and_BKG()
 
     def calculate_SC(self, daily_demand, start_day, lt): 
         self.SC = sum(daily_demand[start_day-1: start_day-1+lt])
@@ -111,27 +111,22 @@ class Cycle:
             daily_sigma[start_day-1: start_day-1+lt], 0
         )**(1/2)
 
-    def calculate_BKG(self): 
-        if self.__fr == None: 
-            raise MissingContext("Fill Rate has not been defined")
-        self.BKG = (1 - self.__fr)*(self.SC)
-
-    def calculate_SS(self): 
-        if self.BKG == None: 
-            raise MissingContext(
-                "Cannot calculate Safety Stock prior to calculating BKG."
-            )
-        self.SS = fsolve(
-            self.solve_for_ss, 
-            0, 
-            args=tuple([self.sigma, self.BKG]),
-        )[0]
+    def calculate_SS_and_BKG(self): 
+        self.SS, self.BKG = fsolve(
+            self.solve_for_ss_and_bkg, 
+            [0, 0], 
+            args=(self.sigma, self.SC, self.fr),
+        )
 
     @staticmethod
-    def solve_for_ss(ss, sigma, bkg):
+    def solve_for_ss_and_bkg(xv, sigma, sc, fr):
         global normdist
         if sigma == 0: 
-            return 0
+            return (0, 0)
+        return (
+            (xv[0] + sc)/(xv[0] + sc + xv[1]) - fr,
+            (- xv[0]*(1 - normdist.cdf(xv[0]/sigma)) + sigma*normdist.pdf(xv[0]/sigma) - xv[1])
+        )
         return - ss*(1 - normdist.cdf(ss/sigma)) + sigma*normdist.pdf(ss/sigma) - bkg
 
 
@@ -139,7 +134,9 @@ class Plant:
 
 
     def __init__(
-        self, plant_id, capacity 
+        self, plant_id, capacity, families, production_rv
     ):
         self.plant_id = plant_id
         self.capacity = capacity
+        self.families = families
+        self.production_rv = production_rv
