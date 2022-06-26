@@ -97,6 +97,7 @@ class Family:
         return [
             [
                 self.family_id,
+                self.lt,
                 i,
                 datetime.strptime(
                     "2022-" + str(cycle.start_day), "%Y-%j"

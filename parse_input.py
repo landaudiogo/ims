@@ -7,7 +7,7 @@ from typing import List
 from dataclasses import dataclass
 
 
-def read_input_excel(file_path: str): 
+def read_input_excel(file_path: str, fam_id: str = None, lt: int = None): 
     sheets = pd.read_excel(file_path, sheet_name=None)
     months = pd.DataFrame({
         'Month': pd.Series(range(1, 13))
@@ -53,7 +53,12 @@ def read_input_excel(file_path: str):
         family_subset = combined[combined['Family']==family]
         family_dp = family_subset['pd (days)'].iloc[0]
         family_tbp = family_subset['tbp (days)'].iloc[0]
-        family_lt = family_subset['lt'].iloc[0]
+        family_lt = (lt
+            if (family == fam_id) and (lt != None)
+            else family_subset['lt'].iloc[0]
+        )
+        if family == fam_id: 
+            print(family_lt)
         family_tfr = family_subset[' Target FR'].iloc[0]
         family_cfr = family_subset['Critical FR'].iloc[0]
         family_vcost = family_subset['Variable Cost/ Ton'].iloc[0]
