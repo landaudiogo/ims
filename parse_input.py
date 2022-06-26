@@ -29,6 +29,8 @@ def read_input_excel(file_path: str):
     set_family = set_family & set(data_production["Family"].unique())
     data_budget = sheets["bud"]
     data_capacity = sheets["capfj"]
+    data_sales = sheets["spi"]
+    set_family = set_family & set(data_sales["Family"].unique())
 
     combined = data_fr.join(
         data_demand.set_index(['Family', 'Month']), on=['Family', 'Month']
@@ -41,6 +43,7 @@ def read_input_excel(file_path: str):
     combined = combined.join(data_cost.set_index('Family'), on='Family')
     combined = combined.join(data_fam_importance.set_index("Family"), on="Family")
     combined = combined[combined["Family"].isin(set_family)]
+    combined = combined.join(data_sales.set_index('Family'), on="Family")
     set_family = set_family & set(combined["Family"].unique())
 
     families = set_family
@@ -57,6 +60,7 @@ def read_input_excel(file_path: str):
         family_fcost = family_subset['Fix Cost/ Ton'].iloc[0]
         family_ind_cost = family_vcost + family_fcost
         family_importance = family_subset["Revenue"].iloc[0]
+        family_sales_price = family_subset["Sales Price/ Tons"].iloc[0]
         for month in range(1, 13): 
             days_in_month = calendar.monthrange(2022, month)[1]
             [[d, s]] = family_subset.loc[
@@ -79,7 +83,8 @@ def read_input_excel(file_path: str):
             tfr=family_tfr,
             cfr=family_cfr,
             ind_cost=family_ind_cost,
-            revenue=family_importance
+            revenue=family_importance,
+            sp=family_sales_price,
         ))
     family_list = sorted(family_list, key=cmp_families, reverse=True)
 
@@ -98,7 +103,6 @@ def read_input_excel(file_path: str):
         ))
 
     budget = data_budget.iloc[0, 0]
-
     return ResponseParseInputExcel(family_list, budget, data_production, plant_list)
 
 
@@ -108,5 +112,3 @@ class ResponseParseInputExcel:
     budget: float
     production_df: pd.DataFrame
     plant_list: List[Plant]
-
-    

@@ -10,7 +10,8 @@ from dstructures import (
     Family, Plant
 )
 from constraints import (
-    BudgetConstraint, PlantConstraint, RandomPlantConstraintSolver
+    BudgetConstraint, PlantConstraint, RandomPlantConstraintSolver,
+    AdvancedPlantConstraintSolver
 )
 from utils import cmp_families, cmp_plants
 from exc import StrictCriticalFillRate
@@ -23,14 +24,14 @@ def main(argc, argv):
     families = res.family_list
     budget = res.budget
     production_df = res.production_df
-    plants = sorted(res.plant_list, key=cmp_plants) 
+    plants = res.plant_list
 
     budget_constraint = BudgetConstraint(families, budget)
-    plant_constraint_list = [
-        PlantConstraint(plant)
-        for plant in plants
-    ]
-    plant_constraint_solver = RandomPlantConstraintSolver(plant_constraint_list)
+    plant_constraint_list = [PlantConstraint(plant, families) for plant in plants]
+    plant_constraint_solver = (
+        RandomPlantConstraintSolver(plant_constraint_list)
+        if argv[2] == "random" else AdvancedPlantConstraintSolver(plant_constraint_list)
+    )
 
     for family in families: 
         family.fr = family.cfr
@@ -43,16 +44,19 @@ def main(argc, argv):
             raise StrictCriticalFillRate(
                 "Plant Constraint is exceeded for the defined critical fill rates"
             )
-    
     for family in families: 
         family.fr = family.tfr
-
     plant_constraint_solver.solve()
     budget_constraint.solve_for_fr()
+    df_list = []
     for family in families: 
-        print(family.family_id, family.fr)
+        df_list.extend(family.get_cycle_list())
 
-        
+    res_df = pd.DataFrame(df_list, columns=[
+        "family", "cycle", "start date", "end date", "FR", "ST",
+        "SC", "SS", "BKG", "BKG Cost", "Lead Time", "COV", "revenue"
+    ])
+    res_df.to_excel(argv[3])
 
 
 if __name__ == '__main__': 

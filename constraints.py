@@ -1,7 +1,11 @@
 import numpy as np
+import random
 
 from typing import List
 from dstructures import Family
+from itertools import combinations
+
+from utils import cmp_families
 
 
 class Constraint: 
@@ -44,14 +48,14 @@ class BudgetConstraint(Constraint):
 class PlantConstraint(Constraint): 
 
 
-    def __init__(self, plant): 
+    def __init__(self, plant, families): 
         self.plant = plant
-        self.families = plant.families
+        self.families = families
 
     def validate_constraint(self): 
         rv = np.array([self.plant.production_rv])
         cv = np.array([
-            [family.ST for family in self.plant.families]
+            [family.ST for family in self.families]
         ]).T
         produce = rv.dot(cv).item()
         prod_families = [self.families[i].family_id 
@@ -73,6 +77,10 @@ class PlantConstraintSolver:
 
     def __init__(self, plant_constraints): 
         self.plant_constraints = plant_constraints
+        # random.shuffle(self.plant_constraints)
+
+    def solve(self): 
+        raise NotImplementedError()
 
 
 class RandomPlantConstraintSolver(PlantConstraintSolver): 
@@ -84,5 +92,49 @@ class RandomPlantConstraintSolver(PlantConstraintSolver):
 
 
 
-class AdvancedPlantConstraintSolver: 
-    pass
+class AdvancedPlantConstraintSolver(PlantConstraintSolver): 
+
+    
+    def solve(self): 
+        failing_constraints = [pc
+            for pc in self.plant_constraints
+                if pc.validate_constraint() == False
+        ]
+        if len(failing_constraints) == 0: 
+            return
+
+        comb_list = [[], [], []]
+        for i in [3, 2, 1]:
+            num_comb = i
+            comb = combinations(
+                [j for j in range(len(failing_constraints))],
+                num_comb
+            )
+            for idxs in comb: 
+                universe = set()
+                for pc in failing_constraints: 
+                    universe |= pc.plant.family_set
+                res = universe
+                for idx in idxs: 
+                    res &= failing_constraints[idx].plant.family_set
+                if len(res): 
+                    comb_list[3 - i].append(res)
+        
+        for set_list in comb_list: 
+            for i, s in enumerate(set_list): 
+                set_list[i] = min(s)
+
+        min_list = [max(comb_mins, key=cmp_families) 
+            for comb_mins in comb_list
+                if comb_mins != []
+        ]
+        ref = min_list[0]
+        tons_below_list = [pc.plant.tons_below(ref)
+            for pc in failing_constraints
+        ]
+        print(tons_below_list)
+        pc_index = tons_below_list.index(min(tons_below_list)) 
+        print(pc_index)
+        failing_constraints[pc_index].solve_for_fr()
+        self.solve()
+
