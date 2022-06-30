@@ -52,6 +52,9 @@ class PlantConstraint(Constraint):
         self.plant = plant
         self.families = families
 
+    def __repr__(self): 
+        return f"<PlantConstraint {self.plant}>"
+
     def validate_constraint(self): 
         rv = np.array([self.plant.production_rv])
         cv = np.array([
@@ -65,11 +68,11 @@ class PlantConstraint(Constraint):
         return produce < self.plant.capacity
 
     def get_next_idx(self, i):
-        for i in range(i-1, -2, -1): 
-            if i == -1: 
+        for k in range(i-1, -2, -1): 
+            if k == -1: 
                 raise IndexError()
-            if self.plant.production_rv[i] >= 1e-6: 
-                return i
+            if self.plant.production_rv[k] >= 1e-6: 
+                return k
 
 
 class PlantConstraintSolver: 
@@ -77,7 +80,8 @@ class PlantConstraintSolver:
 
     def __init__(self, plant_constraints): 
         self.plant_constraints = plant_constraints
-        # random.shuffle(self.plant_constraints)
+        random.shuffle(self.plant_constraints)
+        print(self.plant_constraints)
 
     def solve(self): 
         raise NotImplementedError()

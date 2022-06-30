@@ -40,20 +40,27 @@ def main(argc, argv):
             "Budget Constraint is exceeded for the defined critical fill rates"
         )
     for plant_constraint in plant_constraint_list: 
+        print(plant_constraint)
         if plant_constraint.validate_constraint() == False: 
             raise StrictCriticalFillRate(
                 "Plant Constraint is exceeded for the defined critical fill rates"
             )
+
+
     for family in families: 
         family.fr = family.tfr
     plant_constraint_solver.solve()
-    budget_constraint.solve_for_fr()
+    # budget_constraint.solve_for_fr()
+
+    for family in families: 
+        print(family.family_id, family.fr)# , family.true_fr())
+
     df_list = []
     for family in families: 
         df_list.extend(family.get_cycle_list())
 
     res_df = pd.DataFrame(df_list, columns=[
-        "family", "cycle", "start date", "end date", "FR", "ST",
+        "family", "cycle", "start date", "end date", "FR", "sigma", "ST",
         "SC", "SS", "BKG", "BKG Cost", "Lead Time", "COV", "revenue"
     ])
     res_df.to_excel(argv[3])
