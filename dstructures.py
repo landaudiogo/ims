@@ -78,7 +78,13 @@ class Family:
 
     @property
     def fr(self): 
-        return self.__fr
+        return round(self.__fr, 2)
+
+    def true_fr(self): 
+        return [
+            round(cycle.true_fr, 2)
+            for cycle in self.cycles
+        ]
 
     @fr.setter
     def fr(self, value: float): 
@@ -105,6 +111,7 @@ class Family:
                     "2022-" + str(min(cycle.start_day + cycle.lt, 365)), "%Y-%j"
                 ).strftime("%Y-%m-%d"),
                 self.fr,
+                cycle.sigma,
                 cycle.ST,
                 cycle.SC, 
                 cycle.SS, 
@@ -147,6 +154,12 @@ class Cycle:
     @property
     def ST(self): 
         return self.SS + self.SC
+
+    @property
+    def true_fr(self):
+        if self.ST + self.BKG <= 1e-6: 
+            return 1
+        return (self.ST)/(self.ST+self.BKG)
 
     @fr.setter
     def fr(self, value: float): 
